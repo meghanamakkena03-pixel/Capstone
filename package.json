@@ -1,0 +1,12 @@
+{
+  "name": "capstone-project",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aqua Scope: Underwater Pollution Detection & Explainable AI Pipeline",
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "preview": "npm --prefix web run preview"
+  }
+}
+

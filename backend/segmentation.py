@@ -1,52 +1,22 @@
-
-from pathlib import Path
-
 import cv2
 import numpy as np
-from ultralytics import YOLO
 
-
-MODEL_PATH = Path(__file__).resolve().parent / "models" / "best.pt"
-
-TRASH_CLASSES = {
-    "trash_clothing",
-    "trash_pipe",
-    "trash_bottle",
-    "trash_bag",
-    "trash_snack_wrapper",
-    "trash_can",
-    "trash_cup",
-    "trash_container",
-    "trash_unknown_instance",
-    "trash_branch",
-    "trash_wreckage",
-    "trash_tarp",
-    "trash_rope",
-    "trash_net",
-}
-
-_segmentation_model = None
+from detection import (
+    TRASH_CLASSES,
+    YOLO_LOCK,
+    get_detection_model,
+    resize_for_model,
+)
+from runtime_config import INFERENCE_DEVICE, YOLO_IMAGE_SIZE
 
 
 def get_segmentation_model():
-    global _segmentation_model
-
-    if _segmentation_model is None:
-        if not MODEL_PATH.is_file() or MODEL_PATH.stat().st_size == 0:
-            raise FileNotFoundError(
-                f"Segmentation model not found or empty: {MODEL_PATH}"
-            )
-
-        model = YOLO(str(MODEL_PATH))
-
-        if model.task != "segment":
-            raise ValueError(
-                f"Expected a segmentation model, got: {model.task}"
-            )
-
-        _segmentation_model = model
-
-    return _segmentation_model
+    # best.pt was verified locally to report model.task == "segment".
+    # Reuse the exact same loaded model object as detection/explainability.
+    model = get_detection_model()
+    if model.task != "segment":
+        raise ValueError(f"Expected a YOLO segmentation model, got: {model.task}")
+    return model
 
 
 def segment_image(image_rgb):
@@ -58,71 +28,73 @@ def segment_image(image_rgb):
     ):
         raise ValueError("Expected a valid RGB image.")
 
+    model_input, scale = resize_for_model(image_rgb)
     model = get_segmentation_model()
 
-    result = model.predict(
-        source=image_rgb,
-        imgsz=640,
-        conf=0.25,
-        device="cpu",
-        verbose=False,
-    )[0]
+    with YOLO_LOCK:
+        result = model.predict(
+            source=model_input,
+            imgsz=YOLO_IMAGE_SIZE,
+            conf=0.25,
+            device=INFERENCE_DEVICE,
+            verbose=False,
+            half=False,
+            max_det=100,
+        )[0]
 
     segmented_rgb = image_rgb.copy()
     segments = []
 
     if result.masks is None or result.boxes is None:
+        del result
         return segmented_rgb, segments
 
-    masks = result.masks.data.cpu().numpy()
+    try:
+        masks = result.masks.data.cpu().numpy()
+        for index, mask in enumerate(masks):
+            class_id = int(result.boxes.cls[index].item())
+            class_name = model.names[class_id]
+            confidence = float(result.boxes.conf[index].item())
+            if class_name not in TRASH_CLASSES:
+                continue
 
-    for index, mask in enumerate(masks):
-        class_id = int(result.boxes.cls[index].item())
-        class_name = model.names[class_id]
-        confidence = float(result.boxes.conf[index].item())
+            # Masks are in model-input space; restore original image dimensions.
+            if scale != 1.0:
+                mask = cv2.resize(
+                    mask.astype(np.float32),
+                    (image_rgb.shape[1], image_rgb.shape[0]),
+                    interpolation=cv2.INTER_NEAREST,
+                )
+            elif mask.shape[:2] != image_rgb.shape[:2]:
+                mask = cv2.resize(
+                    mask.astype(np.float32),
+                    (image_rgb.shape[1], image_rgb.shape[0]),
+                    interpolation=cv2.INTER_NEAREST,
+                )
 
-        if class_name not in TRASH_CLASSES:
-            continue
+            binary_mask = mask > 0.5
+            if not np.any(binary_mask):
+                continue
 
-        mask = cv2.resize(
-            mask.astype(np.float32),
-            (image_rgb.shape[1], image_rgb.shape[0]),
-            interpolation=cv2.INTER_NEAREST,
-        )
+            # Blend directly into the output; avoid a second full-size overlay copy.
+            segmented_rgb[binary_mask] = (
+                segmented_rgb[binary_mask].astype(np.float32) * 0.6
+                + np.array([255, 0, 0], dtype=np.float32) * 0.4
+            ).astype(np.uint8)
 
-        binary_mask = mask > 0.5
+            contours, _ = cv2.findContours(
+                binary_mask.astype(np.uint8),
+                cv2.RETR_EXTERNAL,
+                cv2.CHAIN_APPROX_SIMPLE,
+            )
+            cv2.drawContours(segmented_rgb, contours, -1, (0, 0, 0), 2)
 
-        if not np.any(binary_mask):
-            continue
-
-        overlay = segmented_rgb.copy()
-        overlay[binary_mask] = (255, 0, 0)
-
-        segmented_rgb = cv2.addWeighted(
-            segmented_rgb,
-            0.6,
-            overlay,
-            0.4,
-            0,
-        )
-
-        contours, _ = cv2.findContours(
-            binary_mask.astype(np.uint8),
-            cv2.RETR_EXTERNAL,
-            cv2.CHAIN_APPROX_SIMPLE,
-        )
-
-        cv2.drawContours(
-            segmented_rgb,
-            contours,
-            -1,
-            (0, 0, 0),
-            2,
-        )
-
-        segments.append({
-            "class_name": class_name,
-            "confidence": round(confidence, 4),
-        })
+            segments.append({
+                "class_name": class_name,
+                "confidence": round(confidence, 4),
+            })
+        del masks
+    finally:
+        del result
 
     return segmented_rgb, segments
