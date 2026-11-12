@@ -19,16 +19,17 @@ app = FastAPI(title="Aqua Scope API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://capstone67.vercel.app",
-],
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://capstone67.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 MAX_FILE_SIZE = 15 * 1024 * 1024
+MAX_ANALYSIS_DIMENSION = 1024
 
 
 @app.get("/")
@@ -78,6 +79,27 @@ async def read_image(file: UploadFile):
     image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
 
     return image_rgb, len(contents)
+
+
+def resize_for_analysis(image_rgb):
+    height, width = image_rgb.shape[:2]
+    largest_dimension = max(height, width)
+
+    if largest_dimension <= MAX_ANALYSIS_DIMENSION:
+        return image_rgb
+
+    scale = MAX_ANALYSIS_DIMENSION / largest_dimension
+
+    new_width = int(width * scale)
+    new_height = int(height * scale)
+
+    resized_image = cv2.resize(
+        image_rgb,
+        (new_width, new_height),
+        interpolation=cv2.INTER_AREA,
+    )
+
+    return resized_image
 
 
 def image_to_data_url(image_rgb):
@@ -269,6 +291,9 @@ async def explain_endpoint(file: UploadFile = File(...)):
 @app.post("/analyze")
 async def analyze_endpoint(file: UploadFile = File(...)):
     image_rgb, _ = await read_image(file)
+
+    # Reduce image dimensions to help limit memory usage.
+    image_rgb = resize_for_analysis(image_rgb)
 
     try:
         # Stage 1: Enhance the input using NU2Net.
