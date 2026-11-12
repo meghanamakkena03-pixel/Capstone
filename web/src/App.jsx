@@ -33,7 +33,7 @@ import ProfileModal from './components/ProfileModal';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import './components/authStyles.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://capstone-backend-dtau.onrender.com';
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
 const workflow = [
@@ -357,7 +357,7 @@ function App() {
     } catch (error) {
       setImageError(
         error.message === 'Failed to fetch'
-          ? 'Cannot connect to Aqua Scope. Make sure the FastAPI backend is running at http://127.0.0.1:8000.'
+          ? 'Cannot connect to Aqua Scope. Make sure the FastAPI backend is running at https://capstone-backend-dtau.onrender.com.'
           : error.message || 'Something went wrong during analysis.'
       );
       setAnalysisStatus('error');

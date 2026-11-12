@@ -3,7 +3,7 @@ title Aqua Scope - Underwater Intelligence System
 echo ========================================================
 echo Launching Aqua Scope Capstone Project...
 echo ========================================================
-echo Starting Backend on http://127.0.0.1:8000
+echo Starting Backend on https://capstone-backend-dtau.onrender.com
 start "Aqua Scope Backend" cmd /c "%~dp0start_backend.bat"
 
 echo Waiting for backend to initialize...
@@ -19,6 +19,6 @@ start http://localhost:5173
 echo ========================================================
 echo Aqua Scope is now running!
 echo Frontend: http://localhost:5173
-echo Backend:  http://127.0.0.1:8000
-echo Swagger:  http://127.0.0.1:8000/docs
+echo Backend:  https://capstone-backend-dtau.onrender.com
+echo Swagger:  https://capstone-backend-dtau.onrender.com/docs
 echo ========================================================

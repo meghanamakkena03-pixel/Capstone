@@ -20,7 +20,7 @@ export default function AuthModal({
   onClose,
   onLoginSuccess,
   reason = '',
-  apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+  apiUrl = import.meta.env.VITE_API_URL || 'https://capstone-backend-dtau.onrender.com'
 }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [showPassword, setShowPassword] = useState(false);

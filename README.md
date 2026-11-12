@@ -51,7 +51,7 @@ An advanced, end-to-end underwater computer vision capstone project integrating 
 
 ### Option A: One-Click Launch (Recommended)
 Double-click `start_all.bat` in the project root. This automatically:
-1. Starts the FastAPI backend at `http://127.0.0.1:8000`.
+1. Starts the FastAPI backend at `https://capstone-backend-dtau.onrender.com`.
 2. Starts the React Vite frontend at `http://localhost:5173`.
 3. Opens your default web browser directly to the application.
 

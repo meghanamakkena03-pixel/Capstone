@@ -50,10 +50,10 @@ Terminal 2:
 Open:
   http://localhost:5173
 API docs:
-  http://127.0.0.1:8000/docs
+  https://capstone-backend-dtau.onrender.com/docs
 
 LOCAL FRONTEND API URL
-Your web frontend must point to http://127.0.0.1:8000 during local testing.
+Your web frontend must point to https://capstone-backend-dtau.onrender.com during local testing.
 For production, it must point to https://capstone-backend-dtau.onrender.com.
 Do not commit a local-only URL as the production URL. Prefer a Vite environment
 variable (VITE_API_BASE_URL) if your frontend is already structured for it.

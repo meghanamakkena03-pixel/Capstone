@@ -22,7 +22,7 @@ export default function ProfileModal({
   currentUser,
   onLogout,
   onUpdateUser,
-  apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000',
+  apiUrl = import.meta.env.VITE_API_URL || 'https://capstone-backend-dtau.onrender.com',
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
